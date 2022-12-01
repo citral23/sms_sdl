@@ -12,11 +12,7 @@
 #include "smsplus.h"
 #include "font_drawing.h"
 
-#ifdef NOYUV
-SDL_Color palette_8bpp[256];
-#else
-static uint8_t drm_palette[3][256];
-#endif
+static SDL_Color palette_8bpp[256];
 
 static gamedata_t gdata;
 
@@ -29,16 +25,6 @@ static char home_path[256];
 
 static uint_fast8_t save_slot = 0;
 static uint_fast8_t quit = 0;
-
-#ifndef NOYUV
-#define UINT16_16(val) ((uint32_t)(val * (float)(1<<16)))
-static const uint32_t YUV_MAT[3][3] = {
-	{UINT16_16(0.2999f),   UINT16_16(0.587f),    UINT16_16(0.114f)},
-	{UINT16_16(0.168736f), UINT16_16(0.331264f), UINT16_16(0.5f)},
-	{UINT16_16(0.5f),      UINT16_16(0.418688f), UINT16_16(0.081312f)}
-};
-static uint8_t* dst_yuv[3];
-#endif
 
 static uint_fast8_t forcerefresh = 0;
 static uint32_t update_window_size(uint32_t w, uint32_t h);
@@ -86,65 +72,20 @@ static void video_update(void)
 			{
 				for(a=0;a<8;a++)
 				{
-					#ifdef NOYUV
 					palette_8bpp[i+(a*32)].r = (bitmap.pal.color[i][0]);
 					palette_8bpp[i+(a*32)].g = (bitmap.pal.color[i][1]);
 					palette_8bpp[i+(a*32)].b = (bitmap.pal.color[i][2]);
-					#else
-					/* Set DRM palette */
-					drm_palette[0][i+(a*32)] = ( ( UINT16_16(  0) + YUV_MAT[0][0] * bitmap.pal.color[i][0] + YUV_MAT[0][1] * bitmap.pal.color[i][1] + YUV_MAT[0][2] * bitmap.pal.color[i][2]) >> 16 );
-					drm_palette[1][i+(a*32)] = ( ( UINT16_16(128) - YUV_MAT[1][0] * bitmap.pal.color[i][0] - YUV_MAT[1][1] * bitmap.pal.color[i][1] + YUV_MAT[1][2] * bitmap.pal.color[i][2]) >> 16 );
-					drm_palette[2][i+(a*32)] = ( ( UINT16_16(128) + YUV_MAT[2][0] * bitmap.pal.color[i][0] - YUV_MAT[2][1] * bitmap.pal.color[i][1] - YUV_MAT[2][2] * bitmap.pal.color[i][2]) >> 16 );
-					#endif
 				}
 			}
 		}
-		#ifdef NOYUV
 		SDL_SetPalette(sms_bitmap, SDL_LOGPAL|SDL_PHYSPAL, palette_8bpp, 0, 256);
 		SDL_SetPalette(sdl_screen, SDL_LOGPAL|SDL_PHYSPAL, palette_8bpp, 0, 256);
-		#endif
 	}
 	
-	#ifdef NOYUV
 	if (pixels_shifting_remove) sms_bitmap->pixels += pixels_shifting_remove;
 	SDL_BlitSurface(sms_bitmap, NULL, sdl_screen, NULL);
 	if (pixels_shifting_remove) sms_bitmap->pixels -= pixels_shifting_remove;
-	#else
-	
-	/* This code is courtesy of Slaneesh. Many thanks to him for the help and special thanks also to Johnny too. 
-	 * However Johnny's code is not used because during my testing it was slower.
-	 * He still helped me understand the YUV code though, so thanks.
-	 * */
-	uint8_t *srcbase = sms_bitmap->pixels + pixels_shifting_remove;
-	dst_yuv[0] = sdl_screen->pixels;
-	dst_yuv[1] = dst_yuv[0] + height * sdl_screen->pitch;
-	dst_yuv[2] = dst_yuv[1] + height * sdl_screen->pitch;
-    for (plane=0; plane<3; plane++) /* The three Y, U and V planes */
-    {
-        uint32_t y;
-        register uint8_t *pal = drm_palette[plane];
-        for (y=0; y < height; y++)   /* The number of lines to copy */
-        {
-            register uint8_t *src = srcbase + (y*sms_bitmap->w);
-            register uint8_t *end = src + width;
-            register uint32_t *dst = (uint32_t *)&dst_yuv[plane][width * y];
 
-             __builtin_prefetch(pal, 0, 1 );
-             __builtin_prefetch(src, 0, 1 );
-             __builtin_prefetch(dst, 1, 0 );
-
-            while (src < end)       /* The actual line data to copy */
-            {
-                register uint32_t pix;
-                pix  = pal[*src++];
-                pix |= (pal[*src++])<<8;
-                pix |= (pal[*src++])<<16;
-                pix |= (pal[*src++])<<24;
-                *dst++ = pix;
-            }
-        }
-    }
-	#endif
 	SDL_Flip(sdl_screen);
 }
 
@@ -856,11 +797,7 @@ static void Cleanup(void)
 uint32_t update_window_size(uint32_t w, uint32_t h)
 {
 	if (h == 0) h = 192;
-#ifdef NOYUV
 	sdl_screen = SDL_SetVideoMode(w, h, 8, SDL_HWSURFACE | SDL_TRIPLEBUF | SDL_HWPALETTE);
-#else
-	sdl_screen = SDL_SetVideoMode(w, h, 24, SDL_HWSURFACE | SDL_TRIPLEBUF | SDL_YUV444 | SDL_ANYFORMAT | SDL_FULLSCREEN);
-#endif
 	return 0;
 }
 
@@ -961,21 +898,13 @@ int main (int argc, char *argv[])
 	{
 		if(bitmap.pal.dirty[i])
 		{
-			#ifdef NOYUV
 			palette_8bpp[i].r = 0;
 			palette_8bpp[i].g = 0;
 			palette_8bpp[i].b = 0;
-			#else
-			drm_palette[0][i] = 0;
-			drm_palette[1][i] = 0;
-			drm_palette[2][i] = 0;
-			#endif
 		}
 	}
 	
-#ifdef NOYUV
 	SDL_SetPalette(sms_bitmap, SDL_LOGPAL|SDL_PHYSPAL, palette_8bpp, 0, 256);
-#endif
 
 	forcerefresh = 1;
 	
