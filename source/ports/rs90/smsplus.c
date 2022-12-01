@@ -740,11 +740,6 @@ static void config_load()
 	else
 	{
         printf("Config NOT loaded. >%s\n",config_path);
-        
-		for (i = 0; i < sizeof(option); i++)
-		{
-			option.config_buttons[i] = 0;
-		}
 
 		/* Default mapping for the Bittboy in case loading configuration file fails */
 		option.config_buttons[CONFIG_BUTTON_UP] = SDLK_UP;
