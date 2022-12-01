@@ -21,6 +21,8 @@ t_config option;
 static SDL_Surface* sdl_screen, *backbuffer;
 SDL_Surface *sms_bitmap;
 
+static unsigned int screen_w, screen_h;
+
 static char home_path[256];
 
 static uint_fast8_t save_slot = 0;
@@ -581,7 +583,7 @@ static void Menu()
     int16_t currentselection = 1;
     SDL_Event Event;
     
-    sdl_screen = SDL_SetVideoMode(HOST_WIDTH_RESOLUTION, HOST_HEIGHT_RESOLUTION, 16, SDL_SWSURFACE);
+    sdl_screen = SDL_SetVideoMode(screen_w, screen_h, 16, SDL_SWSURFACE);
     
 	Sound_Pause();
     
@@ -848,13 +850,24 @@ int main (int argc, char *argv[])
 
 	SDL_Init(SDL_INIT_VIDEO);
 	SDL_ShowCursor(0);
+
+	sdl_screen = SDL_SetVideoMode(0, 0, 16, SDL_SWSURFACE | SDL_FULLSCREEN);
+	if (!sdl_screen) {
+		fprintf(stdout, "Could not create display, exiting\n");
+		Cleanup();
+		return 0;
+	}
+
+	screen_w = sdl_screen->w;
+	screen_h = sdl_screen->h;
+
 	if (update_window_size(VIDEO_WIDTH_SMS, 240))
 	{
 		fprintf(stdout, "Could not create display, exiting\n");	
 		Cleanup();
 		return 0;
 	}
-	backbuffer = SDL_CreateRGBSurface(SDL_SWSURFACE, HOST_WIDTH_RESOLUTION, HOST_HEIGHT_RESOLUTION, 16, 0, 0, 0, 0);
+	backbuffer = SDL_CreateRGBSurface(SDL_SWSURFACE, screen_w, screen_h, 16, 0, 0, 0, 0);
 	sms_bitmap = SDL_CreateRGBSurface(SDL_SWSURFACE, VIDEO_WIDTH_SMS, 267, 8, 0, 0, 0, 0);
 	
 	SDL_FillRect(sms_bitmap, NULL, 0 );
