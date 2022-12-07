@@ -20,14 +20,12 @@ print '[Desktop Entry]
 Type=Application
 Name=SMS Plus GX
 Comment=SMS/GG/SG emulator
-Exec=sms_sdl %f
+Exec=env SDL_VIDEO_KMSDRM_SCALING_MODE=1 ./sms_sdl %f
 Icon=sms
 Terminal=false
 Type=Application
 Categories=emulators;
-X-OD-NeedsDownscaling=true
-selectorbrowser=true
-SelectorFilter=sms,SMS,gg,GG,sg,SG,zip,ZIP,col,COL,ms,MS,bin,BIN
+MimeType=application/x-sms-rom;application/x-gamegear-rom;
 ' > opk/default."$1".desktop
 
 mksquashfs ./opk smsplus_"$1".opk -all-root -noappend -no-exports -no-xattrs
