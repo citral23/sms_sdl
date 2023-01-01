@@ -12,7 +12,7 @@ Z80_CORE = z80
 PROFILE = 0
 ZIP_SUPPORT = 1
 
-SRCDIR		= ./source ./source/cpu_cores/$(Z80_CORE) ./source/sound ./source/unzip ./source/scalers
+SRCDIR		= ./source ./source/cpu_cores/$(Z80_CORE) ./source/sound ./source/unzip
 SRCDIR		+= ./source/ports/$(PORT) ./source/sound/$(SOUND_ENGINE) ./source/sound_output/$(SOUND_OUTPUT)
 VPATH		= $(SRCDIR)
 SRC_C		= $(foreach dir, $(SRCDIR), $(wildcard $(dir)/*.c))
@@ -23,8 +23,8 @@ OBJS		= $(OBJ_C) $(OBJ_CP)
 
 CFLAGS		= -Ofast -fdata-sections -ffunction-sections -mplt -mno-shared -mframe-header-opt -fno-common -march=mips32 -mtune=mips32 -flto=auto
 CFLAGS		+= -falign-functions=4 -falign-jumps=4 -falign-loops=4 -falign-labels=4 -fsingle-precision-constant 
-CFLAGS		+= -mno-fp-exceptions -mno-check-zero-division -fno-common
-CFLAGS		+= -DALIGN_DWORD -DNONBLOCKING_AUDIO -D_8BPP_COLOR
+CFLAGS		+= -mno-fp-exceptions -mno-check-zero-division -fno-common -fno-short-enums -ffinite-math-only -funsafe-math-optimizations -fsection-anchors -fgcse-las -fgcse-sm
+CFLAGS		+= -DALIGN_DWORD -D_8BPP_COLOR -DNOBLANKING_LEFTCOLUM -DNONBLOCKING_AUDIO
 CFLAGS		+= -DLSB_FIRST
 CFLAGS		+= -Isource -Isource/cpu_cores/$(Z80_CORE) -Isource/scalers -Isource/ports/$(PORT) -I./source/sound -Isource/unzip -Isource/sdl -Isource/sound/$(SOUND_ENGINE) -Isource/sound_output
 
@@ -32,10 +32,10 @@ SRCDIR		+= ./source/text/fb
 CFLAGS		+= -Isource/text/fb
 
 ifeq ($(PROFILE), YES)
-CFLAGS 		+= -fprofile-generate="/media/mmcblk0p1/sms_gcda"
+CFLAGS 		+= -fprofile-generate="/usr/local/home"
 LDFLAGS		= -lgcov
 else ifeq ($(PROFILE), APPLY)
-CFLAGS		+= -fprofile-use="./"
+CFLAGS		+= -fprofile-use
 LDFLAGS     = -nodefaultlibs
 else
 LDFLAGS     = -nodefaultlibs 
@@ -55,7 +55,7 @@ CFLAGS		+= -Isource/scale2x
 SRCDIR		+= ./source/scale2x
 endif
 
-LDFLAGS		= -nodefaultlibs -lc -lgcc -lSDL -Wl,--as-needed -Wl,--gc-sections -flto=auto -s
+LDFLAGS		+= -lc -lgcc -lSDL -Wl,--as-needed -Wl,--gc-sections -flto=auto -s
 
 ifeq ($(SOUND_OUTPUT), portaudio)
 LDFLAGS		+= -lportaudio
